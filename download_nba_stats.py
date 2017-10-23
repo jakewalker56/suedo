@@ -51,7 +51,7 @@ available_apis = {
 	"leagueConfStandings": "/prod/v1/current/standings_conference.json"
 }
 
-def run_query(query, params):
+def run_query(query, params, debug=False):
     resp = requests.post("http://" + base_url + "/" + query, data=json.dumps(params),
                     headers={
                        'Content-Type':'application/json',
@@ -59,7 +59,15 @@ def run_query(query, params):
     if resp.status_code != 200:
         # This means something went wrong.
         raise ValueError('POST /' + query + ' - ' + params + '/ {} / {}'.format(resp.status_code, resp.__dict__['_content']))
+    if debug is True:
+    	print(query)
     return resp.json()
+
+def replace_arg(query, argname, argvalue):
+    return query.replace("{{" + argname + "}}", argvalue)
+
+def replace_year(query, new_year):
+    return query.replace("/2017/", "/" + new_year +"/")
 
 def get_players():
     global all_players
@@ -73,14 +81,15 @@ def get_player(first, last):
 	players = get_players()
 	return players.loc[(players['firstName'].str.lower() == first.lower()) & (players['lastName'].str.lower() == last.lower())]
 
-def replace_arg(query, argname, argvalue):
-    return query.replace("{{" + argname + "}}", argvalue)
-
-def get_games(player_id):
-	games = run_query(replace_arg(available_apis["playerGameLog"], "personId", player_id), "")
+def get_games(player_id, year=None, debug=False):
+	if year is None:
+		year = "2017"
+		print("woot")
+	games = run_query(replace_year(replace_arg(available_apis["playerGameLog"], "personId", player_id), str(year)), "", debug)
 	return games
 
+
+
 player = get_player("Stephen", "Curry")
-print(player["personId"].tolist()[0])
-games = get_games(player["personId"].tolist()[0])
+games = get_games(player["personId"].tolist()[0], 2016, True)
 print (games)
