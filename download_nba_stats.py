@@ -9,6 +9,7 @@ import pandas
 
 #list of available APIs from http://data.nba.net/10s/prod/v1/today.json:
 base_url = "data.nba.net/10s"
+all_players = None
 available_apis = {
 	"listEndpoints": "/prod/v1/today.json",
 	"playerGameLog": "/prod/v1/2017/players/{{personId}}_gamelog.json",
@@ -61,16 +62,25 @@ def run_query(query, params):
     return resp.json()
 
 def get_players():
-    players = run_query(available_apis["leagueRosterPlayers"], "")
-    players = players[players.keys()[1]]["standard"]
-    df_players = pandas.DataFrame.from_dict(players, orient='columns', dtype=None)
-    return df_players
+    global all_players
+    if all_players is None:
+        players = run_query(available_apis["leagueRosterPlayers"], "")
+        players = players[players.keys()[1]]["standard"]
+        all_players = pandas.DataFrame.from_dict(players, orient='columns', dtype=None)
+    return all_players
 
 def get_player(first, last):
 	players = get_players()
 	return players.loc[(players['firstName'].str.lower() == first.lower()) & (players['lastName'].str.lower() == last.lower())]
 
-def get_games()
+def replace_arg(query, argname, argvalue):
+    return query.replace("{{" + argname + "}}", argvalue)
+
+def get_games(player_id):
+	games = run_query(replace_arg(available_apis["playerGameLog"], "personId", player_id), "")
+	return games
 
 player = get_player("Stephen", "Curry")
-player["personId"]
+print(player["personId"].tolist()[0])
+games = get_games(player["personId"].tolist()[0])
+print (games)
