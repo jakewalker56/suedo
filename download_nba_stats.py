@@ -12,6 +12,7 @@ base_url = "data.nba.net/10s"
 all_players = None
 available_apis = {
 	"listEndpoints": "/prod/v1/today.json",
+	#only returns last 5 games from season...
 	"playerGameLog": "/prod/v1/2017/players/{{personId}}_gamelog.json",
 	"teamLeaders": "/prod/v1/2017/teams/{{teamUrlCode}}/leaders.json",
 	"leagueRosterCoaches": "/prod/v1/2017/coaches.json",
@@ -84,12 +85,12 @@ def get_player(first, last):
 def get_games(player_id, year=None, debug=False):
 	if year is None:
 		year = "2017"
-		print("woot")
 	games = run_query(replace_year(replace_arg(available_apis["playerGameLog"], "personId", player_id), str(year)), "", debug)
 	return games
 
-
+#TODO: to find all the games for a player, probably need to go download ALL games and look at the box scores, 
+#since player game log only reports last 5 games
 
 player = get_player("Stephen", "Curry")
-games = get_games(player["personId"].tolist()[0], 2016, True)
+games = get_games(player["personId"].tolist()[0], 2015, True)
 print (games)
