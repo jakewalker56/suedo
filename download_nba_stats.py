@@ -120,7 +120,9 @@ def download_players(year=2017):
     		pick_num = "UNDRAFTED"
     	else:
     		pick_num = int(player["draft"]["pickNum"])
-  		player_data.loc[len(player_data)] = [player["personId"], player["firstName"], player["lastName"], player["dateOfBirthUTC"], 
+        if not player["heightInches"] or not player["heightFeet"] or not player["weightPounds"]:
+            continue
+    	player_data.loc[len(player_data)] = [str(player["personId"]), player["firstName"], player["lastName"], player["dateOfBirthUTC"], 
     										int(player["heightInches"]) + 12 * int(player["heightFeet"]), int(player["weightPounds"]),
     										player["pos"], pick_num, player["draft"]["seasonYear"], player["country"]]
     player_data.to_csv(str(year) + '_players.csv', index=False)
@@ -242,7 +244,7 @@ def aggregate_data(year=2017):
 	print("aggregated!")
 
 
-download_data(2016)
+download_players(2016)
 aggregate_data(2016)
 
 #TODO: can we get the betting odds / game line for these games retroactively?  
