@@ -225,7 +225,7 @@ def get_player_games(year):
 	except:
 		download_player_games(year)
 		player_games = pandas.read_csv(str(year) + "_player_games.csv", index_col = None, 
-			converters={'id': lambda x: str(x)})
+			converters={'game_id': lambda x: str(x), 'player_id': lambda x: str(x), 'team_id': lambda x: str(x)})
 	return player_games
 
 
