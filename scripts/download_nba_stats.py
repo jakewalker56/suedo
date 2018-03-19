@@ -9,6 +9,8 @@ import pandas
 import datetime
 import time
 from dateutil import tz
+import warnings
+warnings.filterwarnings("ignore")
 
 #list of available APIs from http://data.nba.net/10s/prod/v1/today.json:
 base_url = "data.nba.net/10s"
@@ -125,7 +127,7 @@ def download_players(year=2017):
     	player_data.loc[len(player_data)] = [str(player["personId"]), player["firstName"], player["lastName"], player["dateOfBirthUTC"], 
     										int(player["heightInches"]) + 12 * int(player["heightFeet"]), int(player["weightPounds"]),
     										player["pos"], pick_num, player["draft"]["seasonYear"], player["country"]]
-    player_data.to_csv(str(year) + '_players.csv', index=False)
+    player_data.to_csv("../data/" + str(year) + '_players.csv', index=False)
 
 def download_games(year=2017):
 	global debug
@@ -133,24 +135,38 @@ def download_games(year=2017):
 	schedule = run_query(replace_year(available_apis["leagueSchedule"], year))
 	if debug:
 		print(schedule[schedule.keys()[1]]["standard"])
-		
+	teams = get_teams(year)
 	game_data = pandas.DataFrame(columns=['id','home_team_id','away_team_id','home_team_score','away_team_score','date'])
+	i = 1
 	for game in schedule[schedule.keys()[1]]["standard"]:
+		if (i % 100 == 0):
+			print("downloaded " + str(i) + " games...")
+
 		if game["seasonStageId"] == "1":
 			#skip the preseason games, because honestly...
 			continue
-		if game["hTeam"]["teamId"] == "1610616833" or game["hTeam"]["teamId"] == "1610616834":
-			#ignore all star games where "EST" or "WST" were the home team
+		if not any(game["hTeam"]["teamId"] == teams["id"]) or not any(game["vTeam"]["teamId"] == teams["id"]):
+			#ignore non-NBA games, including exhibition games, all-star games, etc.
 			continue
 		if "startDateEastern" in game.keys():
 			date = game["startDateEastern"]
 		else:
 			#older years don't have eastern starting times in schema
 			date = parse_est_date_from_utc_time(game["startTimeUTC"])
-		#make sure IDs are cast as strings so you don't drop the leading 0's
-		game_data.loc[len(game_data)] = [str(game["gameId"]), str(game["hTeam"]["teamId"]), str(game["vTeam"]["teamId"]), game["hTeam"]["score"], 
-										game["vTeam"]["score"], date]
-	game_data.to_csv(str(year) + '_games.csv', index=False)
+
+		boxscore = run_query(replace_arg(replace_arg(available_apis["boxscore"], "gameDate", date), "gameId", str(game["gameId"])))
+		if "stats" not in boxscore.keys():
+			#there's a bunch of box scores in 2017 that are totally empty and clearly aren't actually
+			#games- they look like maybe some time of tv or schedduling info?  Anyway, we should
+			#mark the game as bogus and skip
+			print("ignoring game " + str(game["gameId"]) + " because it has no boxscore stats")
+			continue
+		else:
+			#make sure IDs are cast as strings so you don't drop the leading 0's
+			i = i+1
+			game_data.loc[len(game_data)] = [str(game["gameId"]), str(game["hTeam"]["teamId"]), str(game["vTeam"]["teamId"]), game["hTeam"]["score"], 
+											game["vTeam"]["score"], date]
+	game_data.to_csv("../data/" + str(year) + '_games.csv', index=False)
 
 def download_teams(year = 2017):
 	print("Downloading teams for " + str(year) + "...")
@@ -163,7 +179,7 @@ def download_teams(year = 2017):
 			#not an NBA team
 			continue
 		teams_data.loc[len(teams_data)] = [str(team["teamId"]), str(team["ttsName"])]
-	teams_data.to_csv(str(year) + "_teams.csv", index=False)
+	teams_data.to_csv("../data/" + str(year) + "_teams.csv", index=False)
 
 def download_player_games(year=2017):
 	games = get_games(year)
@@ -186,66 +202,113 @@ def download_player_games(year=2017):
 			player_row["blocks"], player_row["steals"], player_row["pFouls"]]
 		#let's try to play nice with the API
 		time.sleep(0.2)
-	player_games.to_csv(str(year) + "_player_games.csv", index=False)
+	player_games.to_csv("../data/" + str(year) + "_player_games.csv", index=False)
 
 def get_games(year):
 	try:
-		games = pandas.read_csv(str(year) + "_games.csv", index_col = None, 
-			converters={'id': lambda x: str(x), 'home_team_id': lambda x: str(x), 'away_team_id': lambda x: str(x)})
+		games = pandas.read_csv("../data/" + str(year) + "_games.csv", index_col = None, 
+			converters={'id': lambda x: str(x), 'home_team_id': lambda x: str(x), 'away_team_id': lambda x: str(x)},
+			parse_dates=["date"],
+			date_parser = (lambda x: pandas.datetime.strptime(x, '%Y%m%d')))
 	except:
 		download_games(year)
-		games = pandas.read_csv(str(year) + "_games.csv", index_col = None, 
-			converters={'id': lambda x: str(x), 'home_team_id': lambda x: str(x), 'away_team_id': lambda x: str(x)})
+		games = pandas.read_csv("../data/" + str(year) + "_games.csv", index_col = None,
+			converters={'id': lambda x: str(x), 'home_team_id': lambda x: str(x), 'away_team_id': lambda x: str(x)},
+			parse_dates=["date"],
+			date_parser = (lambda x: pandas.datetime.strptime(x, '%Y%m%d')))
 	return games
 
 def get_players(year):
 	try:
-		players = pandas.read_csv(str(year) + "_players.csv", index_col = None, 
+		players = pandas.read_csv("../data/" + str(year) + "_players.csv", index_col = None, 
 			converters={'id': lambda x: str(x)})
 	except:
 		download_players(year)
-		players = pandas.read_csv(str(year) + "_players.csv", index_col = None, 
+		players = pandas.read_csv("../data/" + str(year) + "_players.csv", index_col = None, 
 			converters={'id': lambda x: str(x)})
 	return players
 
 def get_teams(year):
 	try:
-		teams = pandas.read_csv(str(year) + "_teams.csv", index_col = None, 
+		teams = pandas.read_csv("../data/" + str(year) + "_teams.csv", index_col = None, 
 			converters={'id': lambda x: str(x)})
 	except:
 		download_teams(year)
-		teams = pandas.read_csv(str(year) + "_teams.csv", index_col = None, 
+		teams = pandas.read_csv("../data/" + str(year) + "_teams.csv", index_col = None, 
 			converters={'id': lambda x: str(x)})
 	return teams
 
 def get_player_games(year):
 	try:
-		player_games = pandas.read_csv(str(year) + "_player_games.csv", index_col = None, 
+		player_games = pandas.read_csv("../data/" + str(year) + "_player_games.csv", index_col = None, 
 			converters={'id': lambda x: str(x)})
 	except:
 		download_player_games(year)
-		player_games = pandas.read_csv(str(year) + "_player_games.csv", index_col = None, 
+		player_games = pandas.read_csv("../data/" + str(year) + "_player_games.csv", index_col = None, 
 			converters={'game_id': lambda x: str(x), 'player_id': lambda x: str(x), 'team_id': lambda x: str(x)})
 	return player_games
 
 
 
-def download_data(year=2017):
+def download_data(year=2016):
 	download_games(year)
 	download_players(year)
 	download_teams(year)
 	download_player_games(year)
 
-def aggregate_data(year=2017):
-	#TODO: merge everything into a single dataset we can build a model on (e.g. add aggregation columns like
-	#last 5 game performance, home vs. away, player and opponent team ratings for offense, defense, rebounding, 
-	#strength of schedule, etc.)
-	#Make sure you only use data available at the time the game was played
-	print("aggregated!")
+def get_data(year=2016):
+	get_games(year)
+	get_players(year)
+	get_teams(year)
+	get_player_games(year)
 
+def aggregate_team_data(year=2016, date=pandas.datetime.strptime("20161001", '%Y%m%d')):
+	teams = get_teams(year)
+	games = get_games(year)
+	games = games[games["date"] < date]
+	player_games = get_player_games(year)
+	teams["home_wins"] = 0
+	teams["home_losses"] = 0
+	teams["away_wins"] = 0
+	teams["away_losses"] = 0
+	for team_index,team in teams.iterrows():
+		#aggregate home and away record
+		for game_index, game in games[(games["home_team_id"] == team["id"])].iterrows():
+			if (int(game["home_team_score"]) > int(game["away_team_score"])):
+				teams.set_value(team_index,"home_wins",teams.get_value(team_index, "home_wins") + 1)
+			else:
+				teams.set_value(team_index,"home_losses",teams.get_value(team_index, "home_losses") + 1)
+		for game_index, game in games[games["away_team_id"] == team["id"]].iterrows():
+			if (int(game["home_team_score"]) > int(game["away_team_score"])):
+				teams.set_value(team_index,"away_losses",teams.get_value(team_index, "away_losses") + 1)
+			else:
+				teams.set_value(team_index,"away_wins",teams.get_value(team_index, "away_wins") + 1)
 
-download_players(2016)
-aggregate_data(2016)
+	teams["opponent_location_wins"] = 0
+	teams["opponent_location_losses"] = 0
+	#calculate the opponent win rate in the location the game was played 
+	#(e.g. if it's an away game, what's the opponents strength at home?)
+	#this number makes sense if you believe some teams perform differently at 
+	#home in a way that is different from the way _other_ teams perform at home
+	for team_index, team in teams.iterrows():
+		for game_index, game in games[(games["home_team_id"] == team["id"])].iterrows():
+			teams.set_value(team_index,"opponent_location_wins",teams.get_value(team_index, "opponent_location_wins") + (teams[teams["id"] == game["away_team_id"]]["away_wins"].item()))
+			teams.set_value(team_index,"opponent_location_losses",teams.get_value(team_index, "opponent_location_losses") + teams[teams["id"] == game["away_team_id"]]["away_losses"].item())
+		for game_index, game in games[games["away_team_id"] == team["id"]].iterrows():
+			teams.set_value(team_index,"opponent_location_wins",teams.get_value(team_index, "opponent_location_wins") + teams[teams["id"] == game["home_team_id"]]["home_wins"].item())
+			teams.set_value(team_index,"opponent_location_losses",teams.get_value(team_index, "opponent_location_losses") + teams[teams["id"] == game["home_team_id"]]["home_losses"].item())
+
+	#calculate average margin of victory
+	#calculte last 5 game performance, 
+	#self offense, defense, rebounding numbers
+	#opponent offesne, defense, rebounding etc. when they play a given team vs their average
+		
+	#TODO: finish merging team level data
+	#TODO: merge player_game data to get a single aggregated historical row per player
+	#TODO: player data and include team data (self + oppoenent)
+	#TODO: build a model using team and historical player data to predict player_game data
+	
+	return teams
 
 #TODO: can we get the betting odds / game line for these games retroactively?  
 #There may be arbitrage between daily drafts and betting books
@@ -253,4 +316,11 @@ aggregate_data(2016)
 #TODO: download CARMELO player rankings from 538?
 
 
+#get_data(2016)
+#get_data(2017)
 
+team_data = aggregate_team_data(2016, pandas.datetime.strptime("20161010", '%Y%m%d'))
+print(team_data)
+
+#NOTE: all data includes playoff games... 
+#which probably we should ignore for the purposes of analysis
