@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import sys
 import time
 
-teams = ("ANA","HOU","OAK","TOR","ATL","MIL","STL","CHC","TBD","ARI","LAD","SFG","CLE","SEA","FLA","NYM","WSN","BAL","SDP","PHI","PIT","TEX""BOS","CIN","COL""KCR","DET","MIN","CHW","NYY","MIM","BEN","BOI")
+teams = ("ANA","HOU","OAK","TOR","ATL","MIL","STL","CHC","TBD","ARI","LAD","SFG","CLE","SEA","FLA","NYM","WSN","BAL","SDP","PHI","PIT","TEX","BOS","CIN","COL","KCR","DET","MIN","CHW","NYY","MIM","BEN","BOI")
 years = range(1965, 2020)
 sys.stdout.write("Year,Rnd,DT,OvPck,RdPck,Tm,Signed,Name,Pos,WAR,G,AB,HR,BA,OPS,G,W,L,ERA,WHIP,SV,Type,Drafted Out of")
 for team in teams:
