@@ -1,0 +1,44 @@
+TODO
+-Aggregate all of the interesting information about each team, individual, and game
+-Use a probabilistic model to estimate player performance
+	-inputes to player performance model should include team information
+
+-Pull historic betting data - game lines, daily fantasy prices, etc
+
+questions
+-How do you deal with injuries?
+-How do you deal with trades?
+-How do you deal with sitting?
+-Let's say you notice russel westbrook sitting- how do you assess how his teammates will perform?
+-How do we deal with playoffs?
+-Is there a "relative imporance of this game" metric?  e.g. games against top-3 teams, games in the garden, playoffs, rivalries, etc.
+-can we front-run the market using NLP?
+
+What data do we want? If I'm trying to predict the outcome of a game, I want to know:
+-ELO of each team
+-Home / away status of game
+-Home / away performance of each team
+-Momentum, e.g. how have the last 5 games gone
+-Offensive and defensive ratings of each team
+-How trustworthy are my metrics, e.g. are we in the first 5 games of the season still
+-Is this team meaningfully the same team?  e.g. have there been big trades? Are important players sitting out?
+-Who are the refs and how have they called these teams before
+
+To decide, I need:
+-history of every box score this season
+-history of who played in which games
+-history of refs and their calls on each player
+-history of "current elo" for each team
+-history of CARMELO ranking for each player
+
+The models I want to build are:
+-A model taking in (team data, location, refs) and producing w/l percentage, distribution of points scored for each
+-A model taking in (players data, team data, location, refs) and predicting w/l percentage, distribution of points scored for each
+-A model taking in (player information, team data, location, refs) and predicting distribution of box score fields for that player
+-A model predicting correlation of each player pair on the same team (conditioned on teams their playing?  Should this be "build one model for each important player pair", or should it be "build a model for a given abstract set of player attributes" that applies to any player pair?)
+-A model predicting the correlation of each player pair on opposite teams (if a player does well, do players on the other team do poorly?)
+-I have no idea how to model some of these things, but that's the data I need to theoretically model it
+
+
+Points of interest
+-What I want is a sport with lots of repeated iterations I can bet on where relatively available stats are good representations of the game with low team-specific ideosyncracies (or with team-specific ideosyncracies that are capture in stats and/or modelable).  Soccer seems bad; basketball seems good; Baseball seems good; Football seems ok; Horse racing seems ok;
